@@ -59,3 +59,4 @@ func GetJWTClaim(c *gin.Context) (email string, role string, err error) {
 
 	return email, role, nil
 }
+
