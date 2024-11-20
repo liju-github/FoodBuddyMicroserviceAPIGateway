@@ -8,6 +8,7 @@ import (
 )
 
 type Config struct {
+	Environment        string
 	APIGATEWAYPORT     string
 	JWTSecretKey       string
 	UserGRPCPort       string
@@ -26,5 +27,6 @@ func LoadConfig() Config {
 		UserGRPCPort:       os.Getenv("USERGRPCPORT"),
 		RestaurantGRPCPort: os.Getenv("RESTAURANTGRPCPORT"),
 		OrderCartGTPCPort:  os.Getenv("ORDERCARTGRPCPORT"),
+		Environment:        os.Getenv("ENVIRONMENT"),
 	}
 }

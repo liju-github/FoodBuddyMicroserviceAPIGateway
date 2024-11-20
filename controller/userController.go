@@ -3,8 +3,10 @@ package controller
 import (
 	"context"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
+	"os"
 	"regexp"
 	"strings"
 	"time"
@@ -75,8 +77,43 @@ func (uc *UserController) validateAddress(address model.Address) error {
 func NewUserController(userClient User.UserServiceClient) *UserController {
 	validate := validator.New()
 	logger := logrus.New()
-	logger.SetFormatter(&logrus.JSONFormatter{})
+
+	// Configure JSON formatter with custom fields
+	logger.SetFormatter(&logrus.JSONFormatter{
+		TimestampFormat: "2006-01-02 15:04:05.000",
+		FieldMap: logrus.FieldMap{
+			logrus.FieldKeyTime:  "timestamp",
+			logrus.FieldKeyLevel: "level",
+			logrus.FieldKeyMsg:   "message",
+		},
+		PrettyPrint: false,
+	})
+
+	// Set log level
 	logger.SetLevel(logrus.InfoLevel)
+
+	// Create logs directory if it doesn't exist
+	if err := os.MkdirAll("logs", 0755); err != nil {
+		log.Printf("Failed to create logs directory: %v", err)
+	}
+
+	// Open log file with date in filename
+	currentTime := time.Now()
+	logFileName := fmt.Sprintf("logs/api_%s.log", currentTime.Format("2006-01-02"))
+	logFile, err := os.OpenFile(logFileName, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
+	if err != nil {
+		log.Printf("Failed to open log file: %v", err)
+	} else {
+		// Use both file and stdout for logging
+		logger.SetOutput(io.MultiWriter(os.Stdout, logFile))
+	}
+
+	// Add default fields to all log entries
+	logger = logger.WithFields(logrus.Fields{
+		"service": "api_gateway",
+		"version": "1.0",
+		"env":     config.LoadConfig().Environment,
+	}).Logger
 
 	// Get JWT secret from environment variable or use a default for development
 	jwtSecret := []byte(config.LoadConfig().JWTSecretKey)
