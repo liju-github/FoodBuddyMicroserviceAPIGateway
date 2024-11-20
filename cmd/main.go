@@ -4,8 +4,9 @@ import (
 	"log"
 
 	"github.com/gin-gonic/gin"
-	"github.com/liju-github/FoodBuddyAPIGateway/configs"
 	"github.com/liju-github/FoodBuddyAPIGateway/clients"
+	"github.com/liju-github/FoodBuddyAPIGateway/configs"
+	router "github.com/liju-github/FoodBuddyAPIGateway/route"
 )
 
 func main() {
@@ -13,7 +14,7 @@ func main() {
 	config := config.LoadConfig()
 
 	// Initialize gRPC clients
-	Client, err := clients.InitClients(config)
+	Client, err := clients.InitClients(&config)
 	if err != nil {
 		log.Fatalln(err.Error())
 	}
@@ -23,11 +24,11 @@ func main() {
 	ginRouter := gin.Default()
 
 	// Setup all routes
-	ginRouter.InitializeServiceRoutes(ginRouter, Client)
+	router.InitializeServiceRoutes(ginRouter, Client)
 
 	// Start the HTTP server (API Gateway)
-	log.Printf("API Gateway is running on port %s", config.HTTPPort)
-	if err := ginRouter.Run(":" + config.HTTPPort); err != nil {
+	log.Printf("API Gateway is running on port %s", config.APIGATEWAYPORT)
+	if err := ginRouter.Run(":" + config.APIGATEWAYPORT); err != nil {
 		log.Fatalf("Failed to start HTTP server: %v", err)
 	}
 }

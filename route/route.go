@@ -2,14 +2,10 @@ package router
 
 import (
 	"github.com/gin-gonic/gin"
+	user "github.com/liju-github/CentralisedFoodbuddyMicroserviceProto/User"
 	"github.com/liju-github/FoodBuddyAPIGateway/clients"
 	"github.com/liju-github/FoodBuddyAPIGateway/controller"
 	"github.com/liju-github/FoodBuddyAPIGateway/middleware"
-
-	// "github.com/liju-github/FoodBuddyAPIGateway/proto/admin"
-	"github.com/liju-github/FoodBuddyAPIGateway/proto/content"
-	// "github.com/liju-github/FoodBuddyAPIGateway/proto/notification"
-	"github.com/liju-github/FoodBuddyAPIGateway/proto/user"
 )
 
 // InitializeServiceRoutes initializes gRPC clients for each service, creates controllers,
@@ -19,31 +15,43 @@ func InitializeServiceRoutes(router *gin.Engine, Client *clients.ClientConnectio
 	userClient := user.NewUserServiceClient(Client.ConnUser)
 	userController := controller.NewUserController(userClient)
 	SetupUserRoutes(router, userController)
-
-
-	// // Admin Client setup
-	// adminClient := admin.NewAdminServiceClient(Client.ConnAdmin)
-	// adminController := controller.NewAdminController(adminClient)
-	// SetupAdminRoutes(router, adminController)
-
-	// // Notification Client setup
-	// notificationClient := notification.NewNotificationServiceClient(Client.ConnNotification)
-	// notificationController := controller.NewNotificationController(notificationClient)
-	// SetupNotificationRoutes(router, notificationController)
 }
 
 // SetupUserRoutes configures routes for User-related operations
 func SetupUserRoutes(router *gin.Engine, userController *controller.UserController) {
-	// Public routes
-	router.POST("/register", userController.RegisterHandler)
-	router.POST("/login", userController.LoginHandler)
-
-	// userProtected routes with JWT middleware
-	userProtected := router.Group("/")
-	userProtected.Use(middleware.JWTAuthMiddleware)
+	// Public routes (no authentication required)
+	auth := router.Group("/auth/user")
 	{
-		userProtected.GET("/profile", userController.GetProfileHandler)
-		userProtected.PATCH("/update-profile", userController.UpdateProfileHandler)
+		auth.POST("/signup", userController.Signup)
+		auth.POST("/login", userController.Login)
+		auth.POST("/verify-email", userController.VerifyEmail)
 	}
 
+	// Protected routes (require authentication)
+	protected := router.Group("/api/users")
+	protected.Use(middleware.JWTAuthMiddleware(), middleware.UserAuthMiddleware())
+	{
+		// Profile management
+		protected.GET("/profile/:userId", userController.GetProfile)
+		protected.PUT("/profile", userController.UpdateProfile)
+
+		// Address management
+		address := protected.Group("/address")
+		{
+			address.POST("/", userController.AddAddress)
+			address.GET("/", userController.GetAddresses)
+			address.PUT("/", userController.EditAddress)
+			address.DELETE("/", userController.DeleteAddress)
+		}
+	}
+
+	// Admin routes
+	admin := router.Group("/admin/users")
+	// admin.Use(middleware.JWTAuthMiddleware(), middleware.AdminAuthMiddleware())
+	{
+		admin.GET("", userController.GetAllUsers)                // Get all users
+		admin.POST("/ban", userController.BanUser)               // Ban a user
+		admin.POST("/unban", userController.UnBanUser)           // Unban a user
+		admin.GET("/check-ban", userController.CheckBan) // Check if user is banned
+	}
 }
