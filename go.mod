@@ -7,7 +7,7 @@ require (
 	github.com/go-playground/validator/v10 v10.20.0
 	github.com/golang-jwt/jwt/v5 v5.2.1
 	github.com/joho/godotenv v1.5.1
-	github.com/liju-github/CentralisedFoodbuddyMicroserviceProto v0.0.0-20241120090543-a24e0f76b5dd
+	github.com/liju-github/CentralisedFoodbuddyMicroserviceProto v0.0.0-20241121090856-6e2a00fc71e2
 	github.com/sirupsen/logrus v1.9.3
 	google.golang.org/grpc v1.68.0
 )

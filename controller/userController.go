@@ -7,7 +7,6 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"regexp"
 	"strings"
 	"time"
 
@@ -27,15 +26,6 @@ type UserController struct {
 	logger     *logrus.Logger
 	jwtSecret  []byte
 }
-
-// Custom validation rules
-var (
-	emailRegex    = regexp.MustCompile(`^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`)
-	passwordRegex = regexp.MustCompile(`^[a-zA-Z0-9!@#$%^&*]{8,}$`)
-	nameRegex     = regexp.MustCompile(`^[a-zA-Z\s]{2,50}$`)
-	phoneRegex    = regexp.MustCompile(`^\d{10}$`)
-	pincodeRegex  = regexp.MustCompile(`^\d{6}$`)
-)
 
 // Validation functions
 func (uc *UserController) validateEmail(email string) bool {

@@ -10,23 +10,48 @@ import (
 )
 
 type ClientConnections struct {
-	ConnUser *grpc.ClientConn
+	ConnUser       *grpc.ClientConn
+	ConnRestaurant *grpc.ClientConn
+	ConnAdmin       *grpc.ClientConn
 }
 
 func InitClients(config *config.Config) (*ClientConnections, error) {
 	// User Service Connection
-	ConnUser, err := grpc.NewClient("localhost:"+config.UserGRPCPort, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	ConnUser, err := grpc.Dial("localhost:"+config.UserGRPCPort, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		return nil, errors.New("could not Connect to User gRPC server: " + err.Error())
 	}
 
+	// Restaurant Service Connection
+	ConnRestaurant, err := grpc.Dial("localhost:"+config.RestaurantGRPCPort, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		ConnUser.Close() // Close the user connection if restaurant connection fails
+		return nil, errors.New("could not Connect to Restaurant gRPC server: " + err.Error())
+	}
+
+	// Admin Service Connection
+	ConnAdmin, err := grpc.Dial("localhost:"+config.AdminGRPCPort, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		ConnUser.Close()   // Close the user connection if admin connection fails
+		ConnRestaurant.Close() // Close the restaurant connection if admin connection fails
+		return nil, errors.New("could not Connect to Admin gRPC server: " + err.Error())
+	}
+
 	return &ClientConnections{
-		ConnUser: ConnUser,
+		ConnUser:       ConnUser,
+		ConnRestaurant: ConnRestaurant,
+		ConnAdmin:      ConnAdmin,
 	}, nil
 }
 
 func (c *ClientConnections) Close() {
 	if c.ConnUser != nil {
 		c.ConnUser.Close()
+	}
+	if c.ConnRestaurant != nil {
+		c.ConnRestaurant.Close()
+	}
+	if c.ConnAdmin != nil {
+		c.ConnAdmin.Close()
 	}
 }

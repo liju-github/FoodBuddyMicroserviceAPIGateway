@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"errors"
+	"log"
 	"net/http"
 	"strings"
 	"time"
@@ -90,6 +91,11 @@ func JWTAuthMiddleware() gin.HandlerFunc {
 		c.Set(EntityID, claims.ID)
 		c.Set(RoleKey, claims.Role)
 
+		// Log the values that were set
+		entityID, _ := c.Get(EntityID)
+		role, _ := c.Get(RoleKey)
+		log.Printf("Context values set - EntityID: %v, Role: %v", entityID, role)
+
 		c.Next()
 	}
 }
@@ -174,11 +180,11 @@ func UserAuthMiddleware() gin.HandlerFunc {
 
 // GetUserID retrieves the user ID from the context
 func GetEntityID(c *gin.Context) (string, bool) {
-	userID, exists := c.Get(EntityID)
+	ID, exists := c.Get(EntityID)
 	if !exists {
 		return "", false
 	}
-	return userID.(string), true
+	return ID.(string), true
 }
 
 // GetUserRole retrieves the user role from the context

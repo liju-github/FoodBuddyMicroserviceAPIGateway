@@ -72,3 +72,18 @@ type GetUserByTokenRequest struct {
 
 // GetAllUsersRequest represents an empty request for getting all users
 type GetAllUsersRequest struct{}
+
+// RestaurantLoginRequest represents the request structure for restaurant login
+type RestaurantLoginRequest struct {
+	OwnerEmail string `json:"ownerEmail" binding:"required,email"`
+	Password   string `json:"password" binding:"required,min=8"`
+}
+
+// RestaurantSignupRequest represents the request structure for restaurant signup
+type RestaurantSignupRequest struct {
+	RestaurantName string  `json:"restaurantName" binding:"required"`
+	OwnerEmail     string  `json:"ownerEmail" binding:"required,email"`
+	Password       string  `json:"password" binding:"required,min=8"`
+	PhoneNumber    uint64  `json:"phoneNumber" binding:"required"`
+	Address        Address `json:"address" binding:"required"`
+}

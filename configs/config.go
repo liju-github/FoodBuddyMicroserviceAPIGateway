@@ -14,6 +14,7 @@ type Config struct {
 	UserGRPCPort       string
 	RestaurantGRPCPort string
 	OrderCartGTPCPort  string
+	AdminGRPCPort      string
 }
 
 func LoadConfig() Config {
@@ -27,6 +28,7 @@ func LoadConfig() Config {
 		UserGRPCPort:       os.Getenv("USERGRPCPORT"),
 		RestaurantGRPCPort: os.Getenv("RESTAURANTGRPCPORT"),
 		OrderCartGTPCPort:  os.Getenv("ORDERCARTGRPCPORT"),
+		AdminGRPCPort:      os.Getenv("ADMINGRPCPORT"),
 		Environment:        os.Getenv("ENVIRONMENT"),
 	}
 }
