@@ -2,8 +2,9 @@ package router
 
 import (
 	"github.com/gin-gonic/gin"
-	restaurantPb "github.com/liju-github/CentralisedFoodbuddyMicroserviceProto/Restaurant"
 	adminPb "github.com/liju-github/CentralisedFoodbuddyMicroserviceProto/Admin"
+	orderCartPb "github.com/liju-github/CentralisedFoodbuddyMicroserviceProto/OrderCart"
+	restaurantPb "github.com/liju-github/CentralisedFoodbuddyMicroserviceProto/Restaurant"
 	user "github.com/liju-github/CentralisedFoodbuddyMicroserviceProto/User"
 	"github.com/liju-github/FoodBuddyAPIGateway/clients"
 	"github.com/liju-github/FoodBuddyAPIGateway/controller"
@@ -22,6 +23,15 @@ func InitializeServiceRoutes(router *gin.Engine, Client *clients.ClientConnectio
 	restaurantClient := restaurantPb.NewRestaurantServiceClient(Client.ConnRestaurant)
 	restaurantController := controller.NewRestaurantController(restaurantClient)
 	SetupRestaurantRoutes(router, restaurantController)
+
+	// OrderCart Client setup
+	orderCartClient := orderCartPb.NewOrderCartServiceClient(Client.ConnOrderCart)
+	orderCartController := controller.NewOrderCartController(
+		orderCartClient,
+		userClient,
+		restaurantClient,
+	)
+	SetupOrderCartRoutes(router, orderCartController)
 
 	//Admin Client setup
 	adminClient := adminPb.NewAdminServiceClient(Client.ConnAdmin)
@@ -48,27 +58,30 @@ func SetupUserRoutes(router *gin.Engine, userController *controller.UserControll
 	protected.Use(middleware.JWTAuthMiddleware(), middleware.UserAuthMiddleware())
 	{
 		// Profile management
-		protected.GET("/profile/:userId", userController.GetProfile)
-		protected.PUT("/profile", userController.UpdateProfile)
+		profile := protected.Group("/profile")
+		{
+			profile.GET("", userController.GetProfile) // Query: none (uses JWT)
+			profile.PUT("/update", userController.UpdateProfile)
+		}
 
 		// Address management
 		address := protected.Group("/address")
 		{
-			address.POST("/", userController.AddAddress)
-			address.GET("/", userController.GetAddresses)
-			address.PUT("/", userController.EditAddress)
-			address.DELETE("/", userController.DeleteAddress)
+			address.POST("/add", userController.AddAddress)
+			address.GET("/list", userController.GetAddresses) // Query: none (uses JWT)
+			address.PUT("/update", userController.EditAddress)
+			address.DELETE("/remove", userController.DeleteAddress)
 		}
 	}
 
 	// Admin routes
 	admin := router.Group("/admin/users")
-	// admin.Use(middleware.JWTAuthMiddleware(), middleware.AdminAuthMiddleware())
+	admin.Use(middleware.JWTAuthMiddleware(), middleware.AdminAuthMiddleware())
 	{
-		admin.GET("", userController.GetAllUsers)        // Get all users
-		admin.POST("/ban", userController.BanUser)       // Ban a user
-		admin.POST("/unban", userController.UnBanUser)   // Unban a user
-		admin.GET("/check-ban", userController.CheckBan) // Check if user is banned
+		admin.GET("/list", userController.GetAllUsers) // Query: none
+		admin.POST("/ban", userController.BanUser)
+		admin.POST("/unban", userController.UnBanUser)
+		admin.GET("/ban/status", userController.CheckBan) // Query: userId
 	}
 }
 
@@ -89,14 +102,14 @@ func SetupRestaurantRoutes(router *gin.Engine, restaurantController *controller.
 		restaurant := protected.Group("")
 		restaurant.Use(middleware.RestaurantAuthMiddleware())
 		{
-			restaurant.PUT("/profile", restaurantController.EditRestaurant)
+			restaurant.PUT("/profile/update", restaurantController.EditRestaurant)
 
 			// Product management
 			products := restaurant.Group("/products")
 			{
-				products.POST("", restaurantController.AddProduct)
-				products.PUT("", restaurantController.EditProduct)
-				products.DELETE("", restaurantController.DeleteProductByID)
+				products.POST("/add", restaurantController.AddProduct)
+				products.PUT("/update", restaurantController.EditProduct)
+				products.DELETE("/remove", restaurantController.DeleteProductByID) // Query: productId
 				products.PUT("/stock/increment", restaurantController.IncrementProductStock)
 				products.PUT("/stock/decrement", restaurantController.DecrementProductStock)
 			}
@@ -106,10 +119,6 @@ func SetupRestaurantRoutes(router *gin.Engine, restaurantController *controller.
 		admin := protected.Group("/admin")
 		admin.Use(middleware.AdminAuthMiddleware())
 		{
-			admin.PUT("/products", restaurantController.EditProduct)
-			admin.DELETE("/products", restaurantController.DeleteProductByID)
-			admin.PUT("/products/stock/increment", restaurantController.IncrementProductStock)
-			admin.PUT("/products/stock/decrement", restaurantController.DecrementProductStock)
 			admin.POST("/ban", restaurantController.BanRestaurant)
 			admin.POST("/unban", restaurantController.UnbanRestaurant)
 		}
@@ -118,10 +127,46 @@ func SetupRestaurantRoutes(router *gin.Engine, restaurantController *controller.
 	// Public restaurant and product routes (no authentication required)
 	public := router.Group("/api/public/restaurants")
 	{
-		public.GET("", restaurantController.GetAllRestaurantWithProducts)
-		public.GET("/products", restaurantController.GetRestaurantProductsByID) // Query param: restaurantId
-		public.GET("/products/single", restaurantController.GetProductByID)     // Query param: productId
-		public.GET("/products/stock", restaurantController.GetStockByProductID) // Query param: productId
-		public.GET("/id", restaurantController.GetRestaurantIDviaProductID)     // Query param: productId
+		public.GET("/list", restaurantController.GetAllRestaurantWithProducts)       // Query: none
+		public.GET("/products/list", restaurantController.GetRestaurantProductsByID) // Query: restaurantId
+		public.GET("/products/all", restaurantController.GetAllProducts)             // Query: none
+		public.GET("/products/details", restaurantController.GetProductByID)         // Query: productId
+		public.GET("/products/stock", restaurantController.GetStockByProductID)      // Query: productId
+		public.GET("/lookup", restaurantController.GetRestaurantIDviaProductID)      // Query: productId
+	}
+}
+
+// SetupOrderCartRoutes configures routes for OrderCart-related operations
+func SetupOrderCartRoutes(router *gin.Engine, orderCartController *controller.OrderCartController) {
+	// Cart Operations
+	cart := router.Group("/api/cart")
+	cart.Use(middleware.JWTAuthMiddleware(), middleware.UserAuthMiddleware())
+	{
+		cart.POST("/add", orderCartController.AddProductToCart)
+		cart.GET("/items", orderCartController.GetCartItems) // Query: restaurantId (JWT for userId)
+		cart.GET("/list", orderCartController.GetAllCarts)   // Query: none (JWT for userId)
+		cart.POST("/increment", orderCartController.IncrementProductQuantity)
+		cart.POST("/decrement", orderCartController.DecrementProductQuantity)
+		cart.POST("/remove", orderCartController.RemoveProductFromCart)
+		cart.POST("/clear", orderCartController.ClearCart)
+	}
+
+	// Order Operations for Users
+	userOrder := router.Group("/api/orders")
+	userOrder.Use(middleware.JWTAuthMiddleware(), middleware.UserAuthMiddleware())
+	{
+		userOrder.POST("/place", orderCartController.PlaceOrderByRestID)
+		userOrder.GET("/list", orderCartController.GetOrderDetailsAll)     // Query: status (JWT for userId)
+		userOrder.GET("/details", orderCartController.GetOrderDetailsByID) // Query: orderId (JWT for userId)
+		userOrder.POST("/cancel", orderCartController.CancelOrder)
+	}
+
+	// Order Operations for Restaurants
+	restaurantOrder := router.Group("/api/restaurant/orders")
+	restaurantOrder.Use(middleware.JWTAuthMiddleware(), middleware.RestaurantAuthMiddleware())
+	{
+		restaurantOrder.PUT("/status/update", orderCartController.UpdateOrderStatus)
+		restaurantOrder.GET("/list", orderCartController.GetRestaurantOrders) // Query: status (JWT for restaurantId)
+		restaurantOrder.POST("/confirm", orderCartController.ConfirmOrder)
 	}
 }

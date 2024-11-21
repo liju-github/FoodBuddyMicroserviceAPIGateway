@@ -390,6 +390,25 @@ func (rc *RestaurantController) GetAllRestaurantWithProducts(c *gin.Context) {
 	c.JSON(http.StatusOK, response)
 }
 
+func (rc *RestaurantController) GetAllProducts(c *gin.Context) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	// Call the gRPC service
+	response, err := rc.restaurantClient.GetAllProducts(ctx, &restaurantPb.GetAllProductsRequest{})
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Return success response with products
+	c.JSON(http.StatusOK, gin.H{
+		"products": response.Products,
+		"message":  response.Message,
+		"count":    len(response.Products),
+	})
+}
+
 func (rc *RestaurantController) AddProduct(c *gin.Context) {
 	var request restaurantPb.AddProductRequest
 	if err := c.ShouldBindJSON(&request); err != nil {

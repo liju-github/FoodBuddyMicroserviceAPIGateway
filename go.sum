@@ -52,6 +52,10 @@ github.com/liju-github/CentralisedFoodbuddyMicroserviceProto v0.0.0-202411210808
 github.com/liju-github/CentralisedFoodbuddyMicroserviceProto v0.0.0-20241121080836-509902dd6b8f/go.mod h1:dpPEGIIrIGU4SXEzvxljlMquVn5+6uef6E/IXjBiyVk=
 github.com/liju-github/CentralisedFoodbuddyMicroserviceProto v0.0.0-20241121090856-6e2a00fc71e2 h1:ptbt3RvXcjZRqnkGa/3D4Qx/j30OIlBLjwMW0LZWmE8=
 github.com/liju-github/CentralisedFoodbuddyMicroserviceProto v0.0.0-20241121090856-6e2a00fc71e2/go.mod h1:dpPEGIIrIGU4SXEzvxljlMquVn5+6uef6E/IXjBiyVk=
+github.com/liju-github/CentralisedFoodbuddyMicroserviceProto v0.0.0-20241121110901-48bfa2898d9a h1:XiZYmPcnpNeeOSuHne2I0LAGq0z9bDQtOejJkkcI3I4=
+github.com/liju-github/CentralisedFoodbuddyMicroserviceProto v0.0.0-20241121110901-48bfa2898d9a/go.mod h1:dpPEGIIrIGU4SXEzvxljlMquVn5+6uef6E/IXjBiyVk=
+github.com/liju-github/CentralisedFoodbuddyMicroserviceProto v0.0.0-20241121112106-cb7866503640 h1:OZfDB24GJmzUlWG7jmACz4BcW6Spt43YNshd64a92p0=
+github.com/liju-github/CentralisedFoodbuddyMicroserviceProto v0.0.0-20241121112106-cb7866503640/go.mod h1:dpPEGIIrIGU4SXEzvxljlMquVn5+6uef6E/IXjBiyVk=
 github.com/mattn/go-isatty v0.0.20 h1:xfD0iDuEKnDkl03q4limB+vH+GxLEtL/jb4xVJSWWEY=
 github.com/mattn/go-isatty v0.0.20/go.mod h1:W+V8PltTTMOvKvAeJH7IuucS94S2C6jfK/D7dTCTo3Y=
 github.com/modern-go/concurrent v0.0.0-20180228061459-e0a39a4cb421/go.mod h1:6dJC0mAP4ikYIbvyc7fijjWJddQyLn8Ig3JB5CqoB9Q=

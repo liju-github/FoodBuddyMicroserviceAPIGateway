@@ -13,7 +13,7 @@ type Config struct {
 	JWTSecretKey       string
 	UserGRPCPort       string
 	RestaurantGRPCPort string
-	OrderCartGTPCPort  string
+	OrderCartGRPCPort  string
 	AdminGRPCPort      string
 }
 
@@ -27,7 +27,7 @@ func LoadConfig() Config {
 		JWTSecretKey:       os.Getenv("JWTSECRET"),
 		UserGRPCPort:       os.Getenv("USERGRPCPORT"),
 		RestaurantGRPCPort: os.Getenv("RESTAURANTGRPCPORT"),
-		OrderCartGTPCPort:  os.Getenv("ORDERCARTGRPCPORT"),
+		OrderCartGRPCPort:  os.Getenv("ORDERCARTGRPCPORT"),
 		AdminGRPCPort:      os.Getenv("ADMINGRPCPORT"),
 		Environment:        os.Getenv("ENVIRONMENT"),
 	}
