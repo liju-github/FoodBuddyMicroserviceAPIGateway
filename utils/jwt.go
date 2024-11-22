@@ -6,6 +6,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
+	config "github.com/liju-github/FoodBuddyAPIGateway/configs"
 )
 
 // GetJWTClaim extracts the email and role claims from the JWT token in the Authorization cookie.
@@ -17,7 +18,7 @@ func GetJWTClaim(c *gin.Context) (email string, role string, err error) {
 	}
 
 	// Load the secret key
-	hmacSecretString := LoadSecrets().JWTSecret
+	hmacSecretString := config.LoadConfig().JWTSecretKey
 	hmacSecret := []byte(hmacSecretString)
 
 	// Parse and validate the token
@@ -59,4 +60,3 @@ func GetJWTClaim(c *gin.Context) (email string, role string, err error) {
 
 	return email, role, nil
 }
-

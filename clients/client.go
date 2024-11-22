@@ -18,31 +18,31 @@ type ClientConnections struct {
 
 func InitClients(config *config.Config) (*ClientConnections, error) {
 	// User Service Connection
-	ConnUser, err := grpc.Dial("localhost:"+config.UserGRPCPort, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	ConnUser, err := grpc.NewClient("localhost:"+config.UserGRPCPort, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		return nil, errors.New("could not Connect to User gRPC server: " + err.Error())
 	}
 
 	// Restaurant Service Connection
-	ConnRestaurant, err := grpc.Dial("localhost:"+config.RestaurantGRPCPort, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	ConnRestaurant, err := grpc.NewClient("localhost:"+config.RestaurantGRPCPort, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
-		ConnUser.Close() // Close the user connection if restaurant connection fails
+		ConnUser.Close()
 		return nil, errors.New("could not Connect to Restaurant gRPC server: " + err.Error())
 	}
 
 	// Admin Service Connection
-	ConnAdmin, err := grpc.Dial("localhost:"+config.AdminGRPCPort, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	ConnAdmin, err := grpc.NewClient("localhost:"+config.AdminGRPCPort, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
-		ConnUser.Close()   // Close the user connection if admin connection fails
-		ConnRestaurant.Close() // Close the restaurant connection if admin connection fails
+		ConnUser.Close() 
+		ConnRestaurant.Close() 
 		return nil, errors.New("could not Connect to Admin gRPC server: " + err.Error())
 	}
 
 	// OrderCart Service Connection
-	ConnOrderCart, err := grpc.Dial("localhost:"+config.OrderCartGRPCPort, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	ConnOrderCart, err := grpc.NewClient("localhost:"+config.OrderCartGRPCPort, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
-		ConnUser.Close()   // Close the user connection if admin connection fails
-		ConnRestaurant.Close() // Close the restaurant connection if admin connection fails
+		ConnUser.Close() 
+		ConnRestaurant.Close() 
 		return nil, errors.New("could not Connect to Admin gRPC server: " + err.Error())
 	}
 

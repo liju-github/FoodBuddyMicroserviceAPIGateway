@@ -728,3 +728,8 @@ func (uc *UserController) GetAllUsers(c *gin.Context) {
 	uc.logger.WithField("count", len(resp.Users)).Info("All users retrieved successfully")
 	c.JSON(http.StatusOK, model.SuccessResponse("Users retrieved successfully", resp))
 }
+
+// GetUserClient returns the user service client for middleware use
+func (uc *UserController) GetUserClient() User.UserServiceClient {
+	return uc.userClient
+}

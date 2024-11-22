@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"context"
 	"errors"
 	"log"
 	"net/http"
@@ -9,6 +10,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
+	User "github.com/liju-github/CentralisedFoodbuddyMicroserviceProto/User"
 	config "github.com/liju-github/FoodBuddyAPIGateway/configs"
 )
 
@@ -170,6 +172,40 @@ func UserAuthMiddleware() gin.HandlerFunc {
 				"success": false,
 				"message": "User access required",
 			})
+			c.Abort()
+			return
+		}
+
+		c.Next()
+	}
+}
+
+// UserBanCheckMiddleware checks if a user is banned before allowing access
+func UserBanCheckMiddleware(userClient User.UserServiceClient) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		// Get user ID from the context (set by JWTAuthMiddleware)
+		userId, exists := GetEntityID(c)
+		if !exists {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "User ID not found in token"})
+			c.Abort()
+			return
+		}
+
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+
+		// Check if user is banned
+		response, err := userClient.CheckBan(ctx, &User.CheckBanRequest{
+			UserId: userId,
+		})
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to check ban status"})
+			c.Abort()
+			return
+		}
+
+		if response.BanStatus {
+			c.JSON(http.StatusForbidden, gin.H{"error": "User is banned"})
 			c.Abort()
 			return
 		}

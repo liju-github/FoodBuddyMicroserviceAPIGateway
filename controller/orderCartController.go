@@ -36,10 +36,12 @@ func NewOrderCartController(orderCartClient OrderCart.OrderCartServiceClient, us
 
 func (oc *OrderCartController) AddProductToCart(c *gin.Context) {
 	var req OrderCart.AddProductToCartRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
+	if err := c.BindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+
+	req.UserId, _ = middleware.GetEntityID(c)
 
 	// Validate required fields
 	if req.UserId == "" || req.ProductId == "" || req.Quantity <= 0 {
@@ -61,7 +63,7 @@ func (oc *OrderCartController) AddProductToCart(c *gin.Context) {
 
 func (oc *OrderCartController) GetCartItems(c *gin.Context) {
 	var req OrderCart.GetCartItemsRequest
-	req.UserId = c.Query("userId")
+	req.UserId, _ = middleware.GetEntityID(c)
 	req.RestaurantId = c.Query("restaurantId")
 
 	if req.UserId == "" {
@@ -82,11 +84,7 @@ func (oc *OrderCartController) GetCartItems(c *gin.Context) {
 }
 
 func (oc *OrderCartController) GetAllCarts(c *gin.Context) {
-	userId := c.Query("userId")
-	if userId == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "userId is required"})
-		return
-	}
+	userId, _ := middleware.GetEntityID(c)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
@@ -102,18 +100,30 @@ func (oc *OrderCartController) GetAllCarts(c *gin.Context) {
 
 func (oc *OrderCartController) IncrementProductQuantity(c *gin.Context) {
 	var req OrderCart.IncrementProductQuantityRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
+	if err := c.BindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	if req.UserId == "" || req.ProductId == "" || req.RestaurantId == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "All fields are required"})
+	req.UserId, _ = middleware.GetEntityID(c)
+
+	if req.UserId == "" || req.ProductId == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "User ID and Product ID are required"})
 		return
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
+
+	// Get restaurant ID from product ID
+	restIDResp, err := oc.restaurantClient.GetRestaurantIDviaProductID(ctx, &Restaurant.GetRestaurantIDviaProductIDRequest{
+		ProductId: req.ProductId,
+	})
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get restaurant ID: " + err.Error()})
+		return
+	}
+	req.RestaurantId = restIDResp.RestaurantId
 
 	response, err := oc.orderCartClient.IncrementProductQuantity(ctx, &req)
 	if err != nil {
@@ -126,18 +136,30 @@ func (oc *OrderCartController) IncrementProductQuantity(c *gin.Context) {
 
 func (oc *OrderCartController) DecrementProductQuantity(c *gin.Context) {
 	var req OrderCart.DecrementProductQuantityRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
+	if err := c.BindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	if req.UserId == "" || req.ProductId == "" || req.RestaurantId == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "All fields are required"})
+	req.UserId, _ = middleware.GetEntityID(c)
+
+	if req.UserId == "" || req.ProductId == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "User ID and Product ID are required"})
 		return
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
+
+	// Get restaurant ID from product ID
+	restIDResp, err := oc.restaurantClient.GetRestaurantIDviaProductID(ctx, &Restaurant.GetRestaurantIDviaProductIDRequest{
+		ProductId: req.ProductId,
+	})
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get restaurant ID: " + err.Error()})
+		return
+	}
+	req.RestaurantId = restIDResp.RestaurantId
 
 	response, err := oc.orderCartClient.DecrementProductQuantity(ctx, &req)
 	if err != nil {
@@ -150,18 +172,36 @@ func (oc *OrderCartController) DecrementProductQuantity(c *gin.Context) {
 
 func (oc *OrderCartController) RemoveProductFromCart(c *gin.Context) {
 	var req OrderCart.RemoveProductFromCartRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
+	if err := c.BindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	if req.UserId == "" || req.ProductId == "" || req.RestaurantId == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "All fields are required"})
+	// Get user ID from middleware
+	userId, _ := middleware.GetEntityID(c)
+	if userId == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "User ID is required"})
+		return
+	}
+	req.UserId = userId
+
+	if req.ProductId == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Product ID is required"})
 		return
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
+
+	// Get restaurant ID from product ID
+	restIDResp, err := oc.restaurantClient.GetRestaurantIDviaProductID(ctx, &Restaurant.GetRestaurantIDviaProductIDRequest{
+		ProductId: req.ProductId,
+	})
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get restaurant ID: " + err.Error()})
+		return
+	}
+	req.RestaurantId = restIDResp.RestaurantId
 
 	response, err := oc.orderCartClient.RemoveProductFromCart(ctx, &req)
 	if err != nil {
@@ -174,10 +214,8 @@ func (oc *OrderCartController) RemoveProductFromCart(c *gin.Context) {
 
 func (oc *OrderCartController) ClearCart(c *gin.Context) {
 	var req OrderCart.ClearCartRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
+	req.UserId, _ = middleware.GetEntityID(c)
+	req.RestaurantId = c.Query("restaurantId")
 
 	if req.UserId == "" || req.RestaurantId == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "All fields are required"})
@@ -201,10 +239,12 @@ func (oc *OrderCartController) ClearCart(c *gin.Context) {
 func (oc *OrderCartController) PlaceOrderByRestID(c *gin.Context) {
 	// 1. Parse and validate request
 	var req OrderCart.PlaceOrderByRestIDRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
+	if err := c.BindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+
+	req.UserId, _ = middleware.GetEntityID(c)
 
 	// 2. Validate required fields
 	if req.UserId == "" || req.RestaurantId == "" || req.DeliveryAddressId == "" {
@@ -260,7 +300,7 @@ func (oc *OrderCartController) PlaceOrderByRestID(c *gin.Context) {
 
 func (oc *OrderCartController) GetOrderDetailsAll(c *gin.Context) {
 	var req OrderCart.GetOrderDetailsAllRequest
-	req.UserId = c.Query("userId")
+	req.UserId, _ = middleware.GetEntityID(c)
 	req.Status = c.Query("status")
 
 	if req.UserId == "" {
@@ -283,7 +323,7 @@ func (oc *OrderCartController) GetOrderDetailsAll(c *gin.Context) {
 func (oc *OrderCartController) GetOrderDetailsByID(c *gin.Context) {
 	var req OrderCart.GetOrderDetailsByIDRequest
 	req.OrderId = c.Query("orderId")
-	req.UserId,_ = middleware.GetEntityID(c)
+	req.UserId, _ = middleware.GetEntityID(c)
 
 	if req.OrderId == "" || req.UserId == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "orderId and userId are required"})
@@ -304,10 +344,11 @@ func (oc *OrderCartController) GetOrderDetailsByID(c *gin.Context) {
 
 func (oc *OrderCartController) CancelOrder(c *gin.Context) {
 	var req OrderCart.CancelOrderRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
+	if err := c.BindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+	req.UserId, _ = middleware.GetEntityID(c)
 
 	if req.OrderId == "" || req.UserId == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "orderId and userId are required"})
@@ -326,47 +367,49 @@ func (oc *OrderCartController) CancelOrder(c *gin.Context) {
 	c.JSON(http.StatusOK, response)
 }
 
-func (oc *OrderCartController) UpdateOrderStatus(c *gin.Context) {
-	var req OrderCart.UpdateOrderStatusRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
+// func (oc *OrderCartController) UpdateOrderStatus(c *gin.Context) {
+// 	var req OrderCart.UpdateOrderStatusRequest
+// 	if err := c.BindJSON(&req); err != nil {
+// 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+// 		return
+// 	}
 
-	if req.OrderId == "" || req.RestaurantId == "" || req.NewStatus == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "orderId, restaurantId, and newStatus are required"})
-		return
-	}
+// 	req.RestaurantId, _ = middleware.GetEntityID(c)
 
-	// Validate order status
-	validStatuses := map[string]bool{
-		"ACCEPTED":  true,
-		"PREPARING": true,
-		"READY":     true,
-		"DELIVERED": true,
-	}
+// 	if req.OrderId == "" || req.RestaurantId == "" || req.NewStatus == "" {
+// 		c.JSON(http.StatusBadRequest, gin.H{"error": "orderId, restaurantId, and newStatus are required"})
+// 		return
+// 	}
 
-	if !validStatuses[req.NewStatus] {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid order status"})
-		return
-	}
+// 	// Validate order status
+// 	validStatuses := map[string]bool{
+// 		"ACCEPTED":  true,
+// 		"PREPARING": true,
+// 		"READY":     true,
+// 		"DELIVERED": true,
+// 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
+// 	if !validStatuses[req.NewStatus] {
+// 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid order status"})
+// 		return
+// 	}
 
-	response, err := oc.orderCartClient.UpdateOrderStatus(ctx, &req)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
+// 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+// 	defer cancel()
 
-	c.JSON(http.StatusOK, response)
-}
+// 	response, err := oc.orderCartClient.UpdateOrderStatus(ctx, &req)
+// 	if err != nil {
+// 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+// 		return
+// 	}
+
+// 	c.JSON(http.StatusOK, response)
+// }
 
 func (oc *OrderCartController) GetRestaurantOrders(c *gin.Context) {
 	var req OrderCart.GetRestaurantOrdersRequest
-	req.RestaurantId = c.Query("restaurantId")
-	req.Status = c.Query("status")
+	req.RestaurantId, _ = middleware.GetEntityID(c)
+	// req.Status = c.Query("status")
 
 	if req.RestaurantId == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "restaurantId is required"})
@@ -387,10 +430,11 @@ func (oc *OrderCartController) GetRestaurantOrders(c *gin.Context) {
 
 func (oc *OrderCartController) ConfirmOrder(c *gin.Context) {
 	var req OrderCart.ConfirmOrderRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
+	if err := c.BindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+	req.RestaurantId, _ = middleware.GetEntityID(c)
 
 	if req.OrderId == "" || req.RestaurantId == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "orderId and restaurantId are required"})
